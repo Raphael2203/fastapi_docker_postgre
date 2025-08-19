@@ -1,5 +1,5 @@
 from uuid import uuid4
-from fastapi import APIRouter, Body, status
+from fastapi import APIRouter, Body, status, HTTPException
 from pydantic import UUID4
 from projeto.categorias.models import CategoriaModel
 from projeto.categorias.schemas import CategoriaIn, CategoriaOut
@@ -18,7 +18,7 @@ async def post(
     categoria_in: CategoriaIn = Body(...)
 ) -> CategoriaOut:
     categoria_out = CategoriaOut(id=uuid4(), **categoria_in.model_dump())
-    categoria_model = CategoriaModel(**categoria_out.model_dump)
+    categoria_model = CategoriaModel(**categoria_out.model_dump())
 
     db_session.add(categoria_model)
     await db_session.commit()
@@ -49,6 +49,12 @@ async def query(
     db_session: DatabaseDepency, 
 ) -> CategoriaOut:
     categoria: CategoriaOut = (await db_session.execute(select(CategoriaModel).filter_by(id=id))
-                               ).scalars().all()
+    ).scalars().first()
+
+    if not categoria:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail=f'Categoria não encontrada no id{id}')
     
     return categoria
+
